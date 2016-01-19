@@ -2,6 +2,8 @@ import sodium/sha2, sodium/common, sodium/chacha20
 import endians, options, os, strutils, sequtils, future
 import commonnim, reactor/util, snappy
 
+export sha256d, byteArray, toBinaryString
+
 type
   Block* = tuple[hashes: seq[Sha256Hash], data: string]
 
@@ -10,7 +12,7 @@ type
   BlockRef* = tuple[inner: BlockHash, outer: BlockHash]
 
   StoreDef* = object
-    path: string
+    path*: string
 
 const BlockHashBytes* = 32
 
@@ -48,7 +50,7 @@ proc parseBlock*(data: string, inner: Option[BlockHash]): Block =
     let ciphertext = data[4 + sha256Bytes * hashCount.int..^(-1)]
     result.data = chaCha20Xor(byteArray(toBinaryString(inner.get)[0..31], 32),
                               byteArray("\0\0\0\0\0\0\0\0", 8), ciphertext)
-    result.data = snappy.uncompress(data)
+    result.data = snappy.uncompress(result.data)
 
 proc labelPath(store: StoreDef, name: string): string =
   if '/' in name or '\\' in name:
@@ -97,6 +99,16 @@ proc loadBlob*(store: StoreDef, hash: BlockHash): string =
     raise newException(Exception, "corrupted blob " & hashHex)
   return data
 
+proc verifyBlob*(store: StoreDef, hash: BlockHash): bool =
+  let hashHex = hash.toBinaryString.encodeHex
+  let path = store.path / "blobs" / hashHex
+  if not fileExists(path):
+    return false
+  let data = readFile(path)
+  if sha256d(data) != hash:
+    return false
+  return true
+
 proc hasBlob*(store: StoreDef, hash: BlockHash): bool =
   let hashHex = hash.toBinaryString.encodeHex
   existsFile(store.path / "blobs" / hashHex)
@@ -105,10 +117,10 @@ proc loadBlock*(store: StoreDef, reference: BlockRef): Block =
   let data = store.loadBlob(reference.outer)
   parseBlock(data, some(reference.inner))
 
-proc `$`(h: BlockHash): string =
+proc `$`*(h: BlockHash): string =
   h.toBinaryString.encodeHex
 
-proc blockHash(h: string): BlockHash =
+proc blockHash*(h: string): BlockHash =
   h.decodeHex.byteArray(BlockHashBytes)
 
 when isMainModule:
@@ -132,7 +144,7 @@ when isMainModule:
     let inner = paramStr(3).blockHash
     let outer = paramStr(4).blockHash
     let b = storeDef.loadBlock((inner: inner, outer: outer))
-    echo "Refs: ", b.hashes
-    echo b.data
+    stderr.writeLine("Refs: " & $b.hashes & " length " & $b.data.len)
+    stdout.write(b.data)
   else:
     echo "bad command: ", command
