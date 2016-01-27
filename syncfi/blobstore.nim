@@ -1,6 +1,6 @@
 import sodium/sha2, sodium/common, sodium/chacha20
 import endians, options, os, strutils, sequtils, future
-import commonnim, reactor/util, snappy
+import commonnim, reactor/util, reactor/async, snappy
 
 export sha256d, byteArray, toBinaryString
 
@@ -11,8 +11,14 @@ type
 
   BlockRef* = tuple[inner: BlockHash, outer: BlockHash]
 
-  StoreDef* = object
-    path*: string
+  StoreDef* = ref object of RootObj
+    putLabel*: (proc(name: string, label: Label): Future[void])
+    getLabel*: (proc(name: string): Future[Label])
+    storeBlob*: (proc(data: string): Future[BlockHash])
+    loadBlob*: (proc(hash: BlockHash): Future[string])
+    hasBlob*: (proc(hash: BlockHash): Future[bool])
+
+  Label* = tuple[outer: BlockHash, inner: Option[BlockHash]]
 
 const BlockHashBytes* = 32
 
@@ -52,70 +58,17 @@ proc parseBlock*(data: string, inner: Option[BlockHash]): Block =
                               byteArray("\0\0\0\0\0\0\0\0", 8), ciphertext)
     result.data = snappy.uncompress(result.data)
 
-proc labelPath(store: StoreDef, name: string): string =
-  if '/' in name or '\\' in name:
-    raise newException(Exception, "bad label name $1" % name)
-  return store.path / "labels" / name
+proc putLabel*(store: StoreDef, name: string, outer: BlockHash, inner: Option[BlockHash]=none(BlockHash)): Future[void] =
+  store.putLabel(name, (outer, inner))
 
-proc putLabel*(store: StoreDef, name: string, outer: BlockHash, inner: Option[BlockHash]) =
-  var data = ""
-  data &= encodeHex(outer.toBinaryString)
-  data &= "\n"
-  if inner.isSome:
-    data &= encodeHex(inner.get.toBinaryString)
-    data &= "\n"
-
-  # TODO: rename, fsync
-  writeFile(store.labelPath(name), data)
-
-proc getLabel*(store: StoreDef, name: string): tuple[outer: BlockHash, inner: Option[BlockHash]] =
-  let data = readFile(store.labelPath(name))
-  let spl = data.split('\L')
-  if spl.len == 0:
-    raise newException(Exception, "invalid label")
-
-  result.outer = spl[0].decodeHex.byteArray(BlockHashBytes)
-  if spl.len >= 2 and spl[1].len != 0:
-    result.inner = some(spl[1].decodeHex.byteArray(BlockHashBytes))
-
-proc storeBlob*(store: StoreDef, data: string): BlockHash =
-  let hash = sha256d(data)
-  let hashHex = hash.toBinaryString.encodeHex
-  let path = store.path / "blobs" / hashHex
-  # TODO: if not exists
-  writeFile(path, data)
-  return hash
-
-proc storeBlock*(store: StoreDef, `block`: Block): BlockRef =
+proc storeBlock*(store: StoreDef, `block`: Block): Future[BlockRef] =
   let (inner, data) = makeBlock(`block`)
-  result.inner = inner
-  result.outer = store.storeBlob(data)
+  store.storeBlob(data).then proc(outerHash: BlockHash): BlockRef =
+    result.inner = inner
+    result.outer = outerHash
 
-proc loadBlob*(store: StoreDef, hash: BlockHash): string =
-  let hashHex = hash.toBinaryString.encodeHex
-  let path = store.path / "blobs" / hashHex
-  let data = readFile(path)
-  if sha256d(data) != hash:
-    raise newException(Exception, "corrupted blob " & hashHex)
-  return data
-
-proc verifyBlob*(store: StoreDef, hash: BlockHash): bool =
-  let hashHex = hash.toBinaryString.encodeHex
-  let path = store.path / "blobs" / hashHex
-  if not fileExists(path):
-    return false
-  let data = readFile(path)
-  if sha256d(data) != hash:
-    return false
-  return true
-
-proc hasBlob*(store: StoreDef, hash: BlockHash): bool =
-  let hashHex = hash.toBinaryString.encodeHex
-  existsFile(store.path / "blobs" / hashHex)
-
-proc loadBlock*(store: StoreDef, reference: BlockRef): Block =
-  let data = store.loadBlob(reference.outer)
-  parseBlock(data, some(reference.inner))
+proc loadBlock*(store: StoreDef, reference: BlockRef): Future[Block] =
+  store.loadBlob(reference.outer).then(data => parseBlock(data, some(reference.inner)))
 
 proc `$`*(h: BlockHash): string =
   h.toBinaryString.encodeHex

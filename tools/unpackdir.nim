@@ -12,7 +12,7 @@ proc unpackDir(storeDef: StoreDef, outputhDir: string, r: BlockRef): BlockRef =
 when isMainModule:
   let storeDef = StoreDef(path: paramStr(1))
   let outdir = paramStr(1)
-  let inner = paramStr(1)
-  let outer = paramStr(1)
+  let inner = paramStr(3)
+  let outer = paramStr(4)
 
   storeDef.storeDir(directory, outdir, (inner: inner, outer: outer))
