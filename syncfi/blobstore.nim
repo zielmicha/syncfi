@@ -2,7 +2,7 @@ import sodium/sha2, sodium/common, sodium/chacha20
 import endians, options, os, strutils, sequtils, future
 import commonnim, reactor/util, reactor/async, snappy
 
-export sha256d, byteArray, toBinaryString
+export byteArray, toBinaryString
 
 type
   Block* = tuple[hashes: seq[Sha256Hash], data: string]
@@ -17,13 +17,17 @@ type
     storeBlob*: (proc(data: string): Future[BlockHash])
     loadBlob*: (proc(hash: BlockHash): Future[string])
     hasBlob*: (proc(hash: BlockHash): Future[bool])
+    hasTree*: (proc(hash: BlockHash): Future[bool])
 
   Label* = tuple[outer: BlockHash, inner: Option[BlockHash]]
 
 const BlockHashBytes* = 32
 
+proc blockHash*(data: string): BlockHash =
+  sha256(sha256("f05815e51a1de990" & data).toBinaryString)
+
 proc makeBlock*(hashes: seq[BlockHash], data: string): tuple[inner: BlockHash, data: string] =
-  result.inner = sha256d(data)
+  result.inner = blockHash(data)
   result.data = pack(hashes.len.uint32)
 
   for hash in hashes:
@@ -73,7 +77,7 @@ proc loadBlock*(store: StoreDef, reference: BlockRef): Future[Block] =
 proc `$`*(h: BlockHash): string =
   h.toBinaryString.encodeHex
 
-proc blockHash*(h: string): BlockHash =
+proc blockHashFromString*(h: string): BlockHash =
   h.decodeHex.byteArray(BlockHashBytes)
 
 when isMainModule:
@@ -88,14 +92,14 @@ when isMainModule:
     echo storeDef.getLabel(label)
   elif command == "storeblob":
     let params = commandLineParams()
-    let refs = params[2..^1].map(x => x.blockHash)
+    let refs = params[2..^1].map(x => x.blockHashFromString)
     let data = readAll(stdin)
     echo "Storing refs: ", refs
     let reference = storeDef.storeBlock((hashes: refs, data: data))
     echo "Reference:", reference
   elif command == "loadblob":
-    let inner = paramStr(3).blockHash
-    let outer = paramStr(4).blockHash
+    let inner = paramStr(3).blockHashFromString
+    let outer = paramStr(4).blockHashFromString
     let b = storeDef.loadBlock((inner: inner, outer: outer))
     stderr.writeLine("Refs: " & $b.hashes & " length " & $b.data.len)
     stdout.write(b.data)

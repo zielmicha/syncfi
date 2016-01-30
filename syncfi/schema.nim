@@ -25,19 +25,19 @@ type
   BlobIndex_Entry* = ref object
     offset*: uint64
     length*: uint64
-    body*: int32
+    body*: uint32
 
   FileType* {.pure.} = enum
     directory = 0, link = 1, regular = 2
 
   DirectoryEntry* = ref object
-    acl*: int32
+    acl*: uint32
     name*: string
     executable*: bool
     `type`*: FileType
     mtime*: uint64
-    body*: int32
-    attributes*: int32
+    body*: uint32
+    attributes*: uint32
 
   PrincipalSubIdKind* {.pure.} = enum
     random = 0, unixGroup = 1, unixUser = 2
@@ -58,9 +58,11 @@ type
     anyone*: bool
 
   MessageKind* {.pure.} = enum
-    getBlock = 0, putBlock = 1, listDirectory = 2, directoryListing = 3
+    getBlock = 0, putBlock = 1, listDirectory = 2, directoryListing = 3, error = 4
 
   Message* = ref object
+    id*: uint64
+    responseTo*: uint64
     case kind*: MessageKind:
     of MessageKind.getBlock:
       getBlock_hash*: string
@@ -68,12 +70,14 @@ type
       putBlock_hash*: string
       data*: string
     of MessageKind.listDirectory:
-      listDirectory_path*: string
+      path*: string
     of MessageKind.directoryListing:
-      directoryListing_path*: string
       outerHash*: string
-      childrenOuterHashes*: string
+      childrenOuterHashes*: seq[string]
       directory*: Block
+    of MessageKind.error:
+      errorNumber*: uint32
+      message*: string
 
   PosixCompat* = ref object
     groupOwner*: Principal
@@ -162,16 +166,19 @@ makeStructCoders(AclEntry, [
   ])
 
 makeStructCoders(Message, [
-  (kind, 0, low(MessageKind), true)
+  (id, 0, 0, true),
+  (responseTo, 16, 0, true),
+  (kind, 8, low(MessageKind), true),
+  (errorNumber, 12, 0, MessageKind.error)
   ], [
   (getBlock_hash, 0, PointerFlag.none, MessageKind.getBlock),
   (putBlock_hash, 0, PointerFlag.none, MessageKind.putBlock),
   (data, 1, PointerFlag.none, MessageKind.putBlock),
-  (listDirectory_path, 0, PointerFlag.text, MessageKind.listDirectory),
-  (directoryListing_path, 0, PointerFlag.text, MessageKind.directoryListing),
-  (outerHash, 1, PointerFlag.none, MessageKind.directoryListing),
-  (childrenOuterHashes, 2, PointerFlag.none, MessageKind.directoryListing),
-  (directory, 3, PointerFlag.none, MessageKind.directoryListing)
+  (path, 0, PointerFlag.text, MessageKind.listDirectory),
+  (outerHash, 0, PointerFlag.none, MessageKind.directoryListing),
+  (childrenOuterHashes, 1, PointerFlag.none, MessageKind.directoryListing),
+  (directory, 2, PointerFlag.none, MessageKind.directoryListing),
+  (message, 0, PointerFlag.text, MessageKind.error)
   ], [])
 
 makeStructCoders(PosixCompat, [], [

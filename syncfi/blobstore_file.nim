@@ -37,30 +37,48 @@ proc getLabel*(store: FileStoreDef, name: string): Future[Label] =
   return immediateFuture[tuple[outer: BlockHash, inner: Option[BlockHash]]]((outer, inner))
 
 proc storeBlob*(store: FileStoreDef, data: string): Future[BlockHash] =
-  let hash = sha256d(data)
+  let hash = blockHash(data)
   let hashHex = hash.toBinaryString.encodeHex
   let path = store.path / "blobs" / hashHex
-  # TODO: if not exists
-  writeFile(path, data)
+
+  if fileExists(path):
+    return immediateFuture(hash)
+
+  let tmpPath = store.path / (".tmp" & hexUrandom(8))
+  writeFile(tmpPath, data)
+  moveFile(tmpPath, path)
   return immediateFuture(hash)
 
 proc loadBlob*(store: FileStoreDef, hash: BlockHash): Future[string] =
   let hashHex = hash.toBinaryString.encodeHex
   let path = store.path / "blobs" / hashHex
   let data = readFile(path)
-  if sha256d(data) != hash:
+  if blockHash(data) != hash:
     raise newException(Exception, "corrupted blob " & hashHex)
   return immediateFuture(data)
 
 proc hasBlob*(store: FileStoreDef, hash: BlockHash): Future[bool] =
   let hashHex = hash.toBinaryString.encodeHex
   let path = store.path / "blobs" / hashHex
-  if not fileExists(path):
-    return immediateFuture(false)
-  let data = readFile(path)
-  if sha256d(data) != hash:
-    return immediateFuture(false)
-  return immediateFuture(true)
+  return immediateFuture(fileExists(path))
+
+proc hasTree*(store: FileStoreDef, hash: BlockHash): Future[bool] {.async.} =
+  let hashHex = hash.toBinaryString.encodeHex
+  let markPath = store.path / "blobs" / (hashHex & ".hastree")
+
+  if fileExists(markPath): asyncReturn true
+
+  if not (await store.hasBlob(hash)):
+    asyncReturn false
+
+  # TODO: read header only?
+  let children = parseBlock(await store.loadBlob(hash), none(BlockHash)).hashes
+  for child in children:
+    if not (await store.hasTree(child)):
+      asyncReturn false
+
+  writeFile(markPath, "")
+  asyncReturn true
 
 proc newFileBlobstore*(path: string): FileStoreDef =
   let self = FileStoreDef(
@@ -70,4 +88,5 @@ proc newFileBlobstore*(path: string): FileStoreDef =
   self.storeBlob = (data: string) => storeBlob(self, data)
   self.loadBlob = (hash: BlockHash) => loadBlob(self, hash)
   self.hasBlob = (hash: BlockHash) => hasBlob(self, hash)
+  self.hasTree = (hash: BlockHash) => hasTree(self, hash)
   return self

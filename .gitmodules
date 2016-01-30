@@ -1,3 +1,0 @@
-[submodule "deps/sodium.nim"]
-	path = deps/sodium.nim
-	url = https://github.com/judofyr/sodium.nim

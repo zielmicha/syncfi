@@ -2,7 +2,7 @@
 
 ### On-disk format
 
-using BlockRef = Int32;
+using BlockRef = UInt32;
 
 using Hash = Data;
 
@@ -189,19 +189,25 @@ struct Acl {
 struct Message {
   # A message that is passed between peers (or client and server).
 
+  id @0 :UInt64;
+  # ID of this message (>0)
+
+  responseTo @5 :UInt64;
+  # This message is response to other message
+
   union {
     getBlock :group {
       # Request peer to return block without outer hash `hash`.
-      hash @0 :Hash;
+      hash @1 :Hash;
     }
 
     putBlock :group {
       # Block with outer hash `hash` has data `data`.
 
-      hash @1 :Hash;
+      hash @2 :Hash;
       # Outer hash of `data`.
 
-      data @2 :Data;
+      data @3 :Data;
       # The encrypted data with outer hashes of child blocks prepended.
       # Null if peer doesn't have this block.
     }
@@ -209,25 +215,31 @@ struct Message {
     listDirectory :group {
       # Requests the server to return directory listing.
 
-      path @3 :Text;
+      path @4 :Text;
       # Path of the directory.
+    }
+
+    error :group {
+      errorNumber @9 :UInt32;
+      # Optional errno (or 0).
+
+      message @10 :Text;
+      # Error message.
     }
 
     directoryListing :group {
       # A response to the listDirectory message
 
-      path @4 :Text;
-      # Path of the directory.
+      outerHash @6 :Hash;
+      # sha256d of the outer hash of the original directory block.
+      # This can be used by the clients to quickly check if a tree has changed.
 
-      outerHash @5 :Hash;
-      # Outer hash of the original directory block.
-
-      childrenOuterHashes @6 :Hash;
+      childrenOuterHashes @7 :List(Hash);
       # Outer hashes of the children of the directory block.
 
-      directory @7 :Block;
+      directory @8 :Block;
       # The directory contest, with inner hashes of some entries
-      # redacted (specifacally these of other directories and files
+      # redacted (specifically these of other directories and files
       # you don't have read permissions to).
     }
   }
