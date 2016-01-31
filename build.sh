@@ -63,7 +63,7 @@ get_dep niceconf https://github.com/networkosnet/niceconf ccf617c397e6c8933d9fca
 get_dep nimbloom https://github.com/zielmicha/nim-bloom 5a5ff9c8e2aec1a6b9e6942486ff53ebe152b72a ''
 get_dep nimsnappy https://github.com/dfdeshom/nimsnappy 22f4597593c1f8728e8a45a7cacc0579a5d2d4b8 ''
 get_dep reactor https://github.com/zielmicha/reactor.nim 554bc66175d1ec4e148a55fa29622138e0b5ddd8 ''
-get_dep reactorfuse https://github.com/zielmicha/reactorfuse 8a57acdad393e0d3fd8cfa927dc857526d486900 ''
+get_dep reactorfuse https://github.com/zielmicha/reactorfuse 9fe866c699bc89736749fb4c7e9c528b9b783642 ''
 get_dep sodium https://github.com/zielmicha/libsodium.nim 66579d24655009d738efed71138cad9f62b73b05 ''
 
 echo '# reactor.nim requires pthreads

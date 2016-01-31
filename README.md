@@ -1,6 +1,6 @@
 # syncfi
 
-**syncfi** is a single master mostly POSIX-compatibile distributed filesystem with ability to work offline, advanced permission support and convergent encryption.
+**syncfi** is a single master mostly POSIX-compatible distributed filesystem with ability to work offline, advanced permission support and convergent encryption.
 
 ## Building
 
@@ -43,7 +43,7 @@ Offline access will be implemented as an auxiliary proxy filesystem.
 
 # get outer hash of fs_something
 ./bin/syncfi blobstore tag fs_something
-# fetch tree from server to blobstore new at /tmp/otherblobstore
+# fetch tree from server to new blobstore at /tmp/otherblobstore
 ./bin/syncfi --blobstore /tmp/otherblobstore blobstore init
 ./bin/syncfi --blobstore /tmp/otherblobstore blobstore fetch localhost:9500 [outer-hash]
 # replicate tag from other blobstore

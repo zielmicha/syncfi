@@ -64,6 +64,9 @@ struct DirectoryEntry {
   body @5 :BlockRef;
   # Entry body.
 
+  size @7 :UInt64;
+  # Size of body.
+
   attributes @6 :BlockRef;
   # Additional attributes (for example xattrs).
 }

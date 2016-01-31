@@ -14,7 +14,7 @@ proc makeAttributes*(entry: DirectoryEntry, inode: uint64): Attributes =
 
   mode = mode or 0o700 # TODO: use mapacl
 
-  Attributes(ino: inode, mode: mode.uint32)
+  Attributes(ino: inode, mode: mode.uint32, size: entry.size)
 
 proc splitDirPath*(path: string): tuple[head: string, tail: string] =
   var path = path.strip(chars={'/'})

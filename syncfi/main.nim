@@ -1,5 +1,5 @@
 import reactor/loop, reactor/async
-import syncfi/blobstore, syncfi/blobstore_file, syncfi/server, syncfi/tools/storedir, syncfi/tools/fetchblocks
+import syncfi/blobstore, syncfi/blobstore_file, syncfi/server, syncfi/tools/storedir, syncfi/tools/fetchblocks, syncfi/fuse
 import docopt, tables, os, options, strutils
 
 const doc = """
@@ -47,3 +47,5 @@ if ns["blobstore"]:
     fetchblocks.main(storePath=storePath, connectAddr= $ns["<connectaddr>"], needBlob= $ns["<outerhash>"]).runLoop()
 elif ns["serve"]:
   server.main(storePath=storePath, port=($ns["<port>"]).parseInt).runLoop()
+elif ns["mount"]:
+  fuse.main(connectAddr= $ns["<connectaddr>"], rootPath= $ns["<fspath>"], mountPath= $ns["<mountpath>"]).runLoop()

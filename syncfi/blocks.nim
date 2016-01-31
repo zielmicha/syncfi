@@ -1,4 +1,4 @@
-import reactor/async, capnp, tables, options
+import reactor/async, capnp, tables, options, collections
 import syncfi/blobstore, syncfi/schema
 
 type
@@ -37,17 +37,39 @@ proc loadSerializedBlock*(storeDef: StoreDef, blockRef: BlockRef): Future[tuple[
   let schemablk = newUnpackerFlat(blk.data).unpackStruct(0, schema.Block)
   asyncReturn ((blk, schemablk))
 
-proc getRef*(blk: blobstore.Block, schemablk: schema.Block, i: uint32): Option[BlockRef] =
+proc getRef*(outerHashes: seq[BlockHash], schemablk: schema.Block, i: uint32): Option[BlockRef] =
   # Retrieve reference from deserialized block.
   if i == 0 or i > uint32(1024 * 1024):
     return none(BlockRef)
   let index = (i - 1).int
 
-  if index >= blk.hashes.len or index >= schemablk.innerHashes.len:
+  if index >= outerHashes.len or index >= schemablk.innerHashes.len:
     return none(BlockRef)
-  let outer = blk.hashes[index]
+  let outer = outerHashes[index]
   let innerString = schemablk.innerHashes[index]
   if innerString == nil or innerString.len != BlockHashBytes:
     return none(BlockRef)
 
-  return some((inner: byteArray(innerString, BlockHashBytes), outer: outer))
+  return some((inner: byteArray(innerString, BlockHashBytes), outer: outer).BlockRef)
+
+proc getRef*(outerHashes: seq[string], schemablk: schema.Block, i: uint32): Option[BlockRef] =
+  # Retrieve reference from deserialized block.
+  if i == 0 or i > uint32(1024 * 1024):
+    return none(BlockRef)
+  let index = (i - 1).int
+
+  if index >= outerHashes.len or index >= schemablk.innerHashes.len:
+    return none(BlockRef)
+
+  let outerString = outerHashes[index]
+  let innerString = schemablk.innerHashes[index]
+  if innerString == nil or innerString.len != BlockHashBytes:
+    return none(BlockRef)
+
+  if outerString == nil or outerString.len != BlockHashBytes:
+    return none(BlockRef)
+
+  return some((inner: byteArray(innerString, BlockHashBytes), outer: byteArray(outerString, BlockHashBytes)).BlockRef)
+
+proc getRef*(blk: blobstore.Block, schemablk: schema.Block, i: uint32): Option[BlockRef] =
+  return getRef(blk.hashes, schemablk, i)

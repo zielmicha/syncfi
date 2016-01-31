@@ -32,6 +32,7 @@ proc makeEntry(storeDef: StoreDef, c: BlockConstructor, path: string, name: stri
   if fileType == S_IFREG:
     entry.`type` = FileType.regular
     entry.body = c.addChild(await storeDef.storeFileContent(path))
+    entry.size = stat.st_size.uint64
   elif fileType == S_IFDIR:
     entry.`type` = FileType.directory
     entry.body = c.addChild(await storeDef.storeDir(path))

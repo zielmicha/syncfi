@@ -38,6 +38,7 @@ type
     mtime*: uint64
     body*: uint32
     attributes*: uint32
+    size*: uint64
 
   PrincipalSubIdKind* {.pure.} = enum
     random = 0, unixGroup = 1, unixUser = 2
@@ -142,7 +143,8 @@ makeStructCoders(DirectoryEntry, [
   (`type`, 6, FileType(0), true),
   (mtime, 8, 0, true),
   (body, 16, 0, true),
-  (attributes, 20, 0, true)
+  (attributes, 20, 0, true),
+  (size, 24, 0, true)
   ], [
   (name, 0, PointerFlag.text, true)
   ], [
