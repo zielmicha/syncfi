@@ -3,3 +3,5 @@ nimcache
 !*/
 !*.*
 nimcache/
+.nimenv
+nimenv.local
