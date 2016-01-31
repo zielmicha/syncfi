@@ -33,6 +33,7 @@ proc handleClient(server: Server, client: TcpConnection) {.async.} =
   proc getBlock(msg: Message) {.async.} =
     let hash = msg.getBlock_hash.byteArray(BlockHashBytes)
     let data = await server.storeDef.loadBlob(hash)
+    echo "sending block ", $hash, " length=", $data.len
     await messagePipe.output.provide(Message(
       responseTo: msg.id,
       kind: MessageKind.putBlock,
@@ -59,11 +60,10 @@ proc handleClient(server: Server, client: TcpConnection) {.async.} =
       listDirectory(msg).ignore()
     else: discard
 
-proc main() {.async.} =
+proc main*(storePath: string, port: int) {.async.} =
   let server = new(Server)
-  server.storeDef = newFileBlobstore(path=paramStr(1))
+  server.storeDef = newFileBlobstore(path=storePath)
 
-  let port = paramStr(2).parseInt
   let tcpServer = await createTcpServer(port)
 
   echo "serving on port ", port
@@ -71,4 +71,7 @@ proc main() {.async.} =
 
 when isMainModule:
   let mainCommands = SuiteDef(commands: @[])
-  main().runLoop()
+  let port = paramStr(2).parseInt
+  let storePath = paramStr(1)
+
+  main(storePath, port).runLoop()

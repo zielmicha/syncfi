@@ -110,7 +110,7 @@ proc openDir(fs: Fs, req: Request) {.async.} =
       asyncReturn
 
   for i, entry in node.dirBody.directory.directory.entries:
-    dirData.appendDirent(kind=typeToDt(entry.`type`), inode=uint64(1 + i), name=entry.name)
+    dirData.appendDirent(kind=typeToDt(entry.`type`), inode=BadInode, name=entry.name)
 
   let handleId = fs.handleCounter
   fs.handleCounter += 1
@@ -177,7 +177,7 @@ proc newFs(): Fs =
   initTable(fs.handles)
   return fs
 
-proc main(connectAddr: string, mountPath: string, rootPath: string) {.async.} =
+proc main*(connectAddr: string, mountPath: string, rootPath: string) {.async.} =
   let fs = newFs()
   fs.rootPath = rootPath
   fs.serverConn = (await connectTcp(connectAddr)).makeMessagePipe

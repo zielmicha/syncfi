@@ -36,6 +36,7 @@ get_dep() {
   name="$1"
   url="$2"
   hash="$3"
+  srcpath="$4"
   new=0
   if ! [ -e "$name" ]; then
     git clone --recursive "$url" "$name"
@@ -49,20 +50,21 @@ get_dep() {
      cd ..
   fi
   cd ../..
-  echo "path: \".nimenv/deps/$name\"" >> nim.cfg
+  echo "path: \".nimenv/deps/$name$srcpath\"" >> nim.cfg
 }
 
 echo "path: \".\"" > nim.cfg
 
-get_dep capnp https://github.com/zielmicha/capnp.nim 702a008b8dcde2a4887a510e37bb9f9179f7da0c
-get_dep collections https://github.com/zielmicha/collections.nim 3f7352b683f26f3c18ad8c68e1a23f0b86b61cb6
-get_dep libcommon https://github.com/networkosnet/libcommon e51cc7898529b80741898b7029b76b3559b8fdf2
-get_dep niceconf https://github.com/networkosnet/niceconf ccf617c397e6c8933d9fca910524136c45e3af8a
-get_dep nimbloom https://github.com/zielmicha/nim-bloom 5a5ff9c8e2aec1a6b9e6942486ff53ebe152b72a
-get_dep nimsnappy https://github.com/dfdeshom/nimsnappy 22f4597593c1f8728e8a45a7cacc0579a5d2d4b8
-get_dep reactor https://github.com/zielmicha/reactor.nim 153e24f050fdacd622fa1c1197f80dd5b7237946
-get_dep reactorfuse https://github.com/zielmicha/reactorfuse 8a57acdad393e0d3fd8cfa927dc857526d486900
-get_dep sodium https://github.com/zielmicha/libsodium.nim 66579d24655009d738efed71138cad9f62b73b05
+get_dep capnp https://github.com/zielmicha/capnp.nim 702a008b8dcde2a4887a510e37bb9f9179f7da0c ''
+get_dep collections https://github.com/zielmicha/collections.nim 3f7352b683f26f3c18ad8c68e1a23f0b86b61cb6 ''
+get_dep docopt https://github.com/docopt/docopt.nim bf2124533a36eadf3999c1ad6a2d8300114f5198 /src/
+get_dep libcommon https://github.com/networkosnet/libcommon e51cc7898529b80741898b7029b76b3559b8fdf2 ''
+get_dep niceconf https://github.com/networkosnet/niceconf ccf617c397e6c8933d9fca910524136c45e3af8a ''
+get_dep nimbloom https://github.com/zielmicha/nim-bloom 5a5ff9c8e2aec1a6b9e6942486ff53ebe152b72a ''
+get_dep nimsnappy https://github.com/dfdeshom/nimsnappy 22f4597593c1f8728e8a45a7cacc0579a5d2d4b8 ''
+get_dep reactor https://github.com/zielmicha/reactor.nim 554bc66175d1ec4e148a55fa29622138e0b5ddd8 ''
+get_dep reactorfuse https://github.com/zielmicha/reactorfuse 8a57acdad393e0d3fd8cfa927dc857526d486900 ''
+get_dep sodium https://github.com/zielmicha/libsodium.nim 66579d24655009d738efed71138cad9f62b73b05 ''
 
 echo '# reactor.nim requires pthreads
 threads: "on"
@@ -91,3 +93,4 @@ mkdir -p bin
 ln -sf ../.nimenv/nim/bin/nim bin/nim
 
 echo "building server"; nim c --out:"$PWD/bin/server" syncfi/server.nim
+echo "building syncfi"; nim c --out:"$PWD/bin/syncfi" syncfi/main.nim

@@ -35,3 +35,22 @@ Offline access will be implemented as an auxiliary proxy filesystem.
 * Filesystem server (read only, ACLs not implemented)
 * FUSE filesystem (read only)
 * Syncing blocks from remote hosts
+
+```
+./bin/syncfi blobstore init
+./bin/syncfi blobstore storedir ~/something fs_something
+./bin/syncfi serve 9500 &
+
+# get outer hash of fs_something
+./bin/syncfi blobstore tag fs_something
+# fetch tree from server to blobstore new at /tmp/otherblobstore
+./bin/syncfi --blobstore /tmp/otherblobstore blobstore init
+./bin/syncfi --blobstore /tmp/otherblobstore blobstore fetch localhost:9500 [outer-hash]
+# replicate tag from other blobstore
+./bin/syncfi --blobstore /tmp/otherblobstore blobstore tag fs_something [outer-hash] [inner-hash]
+
+# mount filesystem from server
+mkdir mnt
+./bin/syncfi mount localhost:9500 something/root mnt
+ls mnt
+```

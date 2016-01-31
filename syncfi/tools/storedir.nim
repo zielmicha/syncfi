@@ -63,13 +63,11 @@ proc storeRoot(storeDef: StoreDef, path: string): Future[BlockRef] {.async.} =
   c.blk.directory.entries.add (await storeDef.makeEntry(c, path, "root"))
   asyncReturn (await c.storeBlock)
 
-proc main() {.async.} =
-  let storeDef = newFileBlobstore(paramStr(1))
-  let directory = paramStr(2)
-
+proc main*(storePath: string, directory: string, label: string) {.async.} =
+  let storeDef = newFileBlobstore(storePath)
   let r = await storeDef.storeRoot(directory)
   echo "stored file: ", r.inner, " ", r.outer
-  await storeDef.putLabel("storedir", (r.outer, r.inner.some))
+  await storeDef.putLabel(label, (r.outer, r.inner.some))
 
 when isMainModule:
-  main().runLoop()
+  main(storePath: paramStr(1), directory: paramStr(2), label: "storefi").runLoop()
