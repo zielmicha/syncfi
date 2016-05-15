@@ -1,4 +1,4 @@
-import reactor/async, reactor/tcp, reactorfuse/raw, collections, tables, posix, os, options, capnp
+import reactor/async, reactor/tcp, reactorfuse/raw, collections, collections/iterate, tables, posix, os, options, capnp
 import syncfi/blobstore, syncfi/rpc, syncfi/schema, syncfi/errors, syncfi/fuse_misc, syncfi/client, syncfi/blocks
 
 type

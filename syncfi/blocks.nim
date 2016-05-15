@@ -9,7 +9,7 @@ type
     outerHashes: seq[BlockHash]
 
 proc make*(c: BlockConstructor): blobstore.Block =
-  return (hashes: c.outerHashes, data: packStruct(c.blk))
+  return (hashes: c.outerHashes, data: capnp.packStruct(c.blk))
 
 proc storeBlock*(c: BlockConstructor): Future[BlockRef] =
   c.storeDef.storeBlock(c.make)

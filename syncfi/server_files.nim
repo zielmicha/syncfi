@@ -1,4 +1,4 @@
-import reactor/async, sodium/sha2, collections, capnp
+import reactor/async, sodium/sha2, collections, collections/iterate, capnp
 import syncfi/blobstore, syncfi/blocks, syncfi/schema, syncfi/errors
 
 proc getChild*(storeDef: StoreDef, dirRef: BlockRef, name: string): Future[BlockRef] {.async.} =

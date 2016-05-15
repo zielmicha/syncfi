@@ -1,8 +1,13 @@
 import reactor/tcp, reactor/async, syncfi/schema, capnp, future
 
 proc makeMessagePipe*(pipe: BytePipe): Pipe[Message] =
+  proc input(): Stream[Message] {.asynciterator.} =
+    asyncFor chunk in pipe.input.readChunksPrefixed():
+      let msg = await catchError(newUnpackerFlat(chunk).unpackStruct(0, Message))
+      asyncYield msg
+
   newPipe(
-    input=pipe.input.readChunksPrefixed().map((x: string) => newUnpackerFlat(x).unpackStruct(0, Message)),
+    input=input(),
     output=pipe.output.writeChunksPrefixed().map((x: Message) => packStruct(x)))
 
 proc rpcTest*(m: Message) =
