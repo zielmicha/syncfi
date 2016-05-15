@@ -1,6 +1,7 @@
 import sodium/sha2, sodium/common, sodium/chacha20
 import endians, options, os, strutils, sequtils, future
 import commonnim, reactor/util, reactor/async, snappy
+import collections/iface
 
 export byteArray, toBinaryString
 
@@ -11,15 +12,17 @@ type
 
   BlockRef* = tuple[inner: BlockHash, outer: BlockHash]
 
-  StoreDef* = ref object of RootObj
-    putLabel*: (proc(name: string, label: Label): Future[void])
-    getLabel*: (proc(name: string): Future[Label])
-    storeBlob*: (proc(data: string): Future[BlockHash])
-    loadBlob*: (proc(hash: BlockHash): Future[string])
-    hasBlob*: (proc(hash: BlockHash): Future[bool])
-    hasTree*: (proc(hash: BlockHash): Future[bool])
-
   Label* = tuple[outer: BlockHash, inner: Option[BlockHash]]
+
+defiface Blobstore:
+  putLabel(name: string, label: Label): Future[void]
+  getLabel(name: string): Future[Label]
+  storeBlob(data: string): Future[BlockHash]
+  loadBlob(hash: BlockHash): Future[string]
+  hasBlob(hash: BlockHash): Future[bool]
+  hasTree(hash: BlockHash): Future[bool]
+
+type StoreDef* = IBlobstore # temporary alias
 
 const BlockHashBytes* = 32
 

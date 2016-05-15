@@ -1,16 +1,16 @@
 import reactor/async, reactor/util
-import syncfi/blobstore
+import syncfi/blobstore, collections/iface
 import future, strutils, os, commonnim, options
 
-type FileStoreDef* = ref object of StoreDef
+type FileBlobstore* = ref object
   path: string
 
-proc labelPath(store: FileStoreDef, name: string): string =
+proc labelPath(store: FileBlobstore, name: string): string =
   if '/' in name or '\\' in name:
     raise newException(Exception, "bad label name $1" % name)
   return store.path / "labels" / name
 
-proc putLabel*(store: FileStoreDef, name: string, label: Label): Future[void] =
+proc putLabel*(store: FileBlobstore, name: string, label: Label): Future[void] =
   var data = ""
   data &= encodeHex(label.outer.toBinaryString)
   data &= "\n"
@@ -23,7 +23,7 @@ proc putLabel*(store: FileStoreDef, name: string, label: Label): Future[void] =
 
   return immediateFuture()
 
-proc getLabel*(store: FileStoreDef, name: string): Future[Label] =
+proc getLabel*(store: FileBlobstore, name: string): Future[Label] =
   let data = readFile(store.labelPath(name))
   let spl = data.split('\L')
   if spl.len == 0:
@@ -36,7 +36,7 @@ proc getLabel*(store: FileStoreDef, name: string): Future[Label] =
 
   return immediateFuture[tuple[outer: BlockHash, inner: Option[BlockHash]]]((outer, inner))
 
-proc storeBlob*(store: FileStoreDef, data: string): Future[BlockHash] =
+proc storeBlob*(store: FileBlobstore, data: string): Future[BlockHash] =
   let hash = blockHash(data)
   let hashHex = hash.toBinaryString.encodeHex
   let path = store.path / "blobs" / hashHex
@@ -49,7 +49,7 @@ proc storeBlob*(store: FileStoreDef, data: string): Future[BlockHash] =
   moveFile(tmpPath, path)
   return immediateFuture(hash)
 
-proc loadBlob*(store: FileStoreDef, hash: BlockHash): Future[string] =
+proc loadBlob*(store: FileBlobstore, hash: BlockHash): Future[string] =
   let hashHex = hash.toBinaryString.encodeHex
   let path = store.path / "blobs" / hashHex
   let data = readFile(path)
@@ -57,12 +57,12 @@ proc loadBlob*(store: FileStoreDef, hash: BlockHash): Future[string] =
     raise newException(Exception, "corrupted blob " & hashHex)
   return immediateFuture(data)
 
-proc hasBlob*(store: FileStoreDef, hash: BlockHash): Future[bool] =
+proc hasBlob*(store: FileBlobstore, hash: BlockHash): Future[bool] =
   let hashHex = hash.toBinaryString.encodeHex
   let path = store.path / "blobs" / hashHex
   return immediateFuture(fileExists(path))
 
-proc hasTree*(store: FileStoreDef, hash: BlockHash): Future[bool] {.async.} =
+proc hasTree*(store: FileBlobstore, hash: BlockHash): Future[bool] {.async.} =
   let hashHex = hash.toBinaryString.encodeHex
   let markPath = store.path / "blobs" / (hashHex & ".hastree")
 
@@ -80,13 +80,7 @@ proc hasTree*(store: FileStoreDef, hash: BlockHash): Future[bool] {.async.} =
   writeFile(markPath, "")
   asyncReturn true
 
-proc newFileBlobstore*(path: string): FileStoreDef =
-  let self = FileStoreDef(
-    path: path)
-  self.putLabel = (name: string, label: Label) => putLabel(self, name, label)
-  self.getLabel = (name: string) => getLabel(self, name)
-  self.storeBlob = (data: string) => storeBlob(self, data)
-  self.loadBlob = (hash: BlockHash) => loadBlob(self, hash)
-  self.hasBlob = (hash: BlockHash) => hasBlob(self, hash)
-  self.hasTree = (hash: BlockHash) => hasTree(self, hash)
-  return self
+#FileBlobstore.implements Blobstore
+
+proc newFileBlobstore*(path: string): IBlobstore =
+  return FileBlobstore(path: path).asIBlobstore
